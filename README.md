@@ -12,7 +12,7 @@ sudo snap install fluxer
 
 Or find it in the Snap Store / App Center. Updates arrive automatically.
 
-If your microphone, camera or saved logins don't work, connect the
+If your microphone or camera doesn't work, connect the
 permissions below.
 
 ```sh
