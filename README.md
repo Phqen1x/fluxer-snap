@@ -81,31 +81,6 @@ snapcraft export-login --snaps fluxer --channels edge \
 
 Promote edge to `beta`/`candidate`/`stable` yourself once you've tested it.
 
-### The in-app update button
-
-Fluxer's "update available" button just opens `fluxer.app/download` in a
-browser, which is no use for a snap. The snap wraps `xdg-open`
-(`snap/local/xdg-open`) and, for that URL only, runs `snap/local/fluxer-refresh`
-instead. It asks whether to:
-
-- **Refresh**: update on the channel you're already tracking, or
-- **Refresh to edge**: switch to `latest/edge` and update.
-
-Switching to edge is sticky. To go back, run
-`sudo snap refresh fluxer --channel=latest/stable`.
-
-The refresh talks to snapd, which needs the privileged `snapd-control`
-interface. The snap does **not** request it yet, because the Snap Store holds
-any upload that plugs it for manual review. Until that's approved, the button
-opens the app's page in the Snap Store (`snap://fluxer`) instead, and the
-dialog above is skipped.
-
-To enable the in-place refresh, add `- snapd-control` to the app's `plugs` in
-`snap/snapcraft.yaml` once the store approves it
-([request it on the snapcraft forum](https://forum.snapcraft.io/c/store-requests/19)),
-or for a local build run `sudo snap connect fluxer:snapd-control` after adding
-the plug.
-
 ### Manual update
 
 Check the current version in the apt repo:

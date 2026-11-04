@@ -35,6 +35,7 @@ parts:
       - libnss3
       - libxss1
       - libxtst6
+      - xdg-utils
       - libatspi2.0-0t64
       - libsecret-1-0
       - libpulse0
@@ -47,25 +48,6 @@ parts:
         "$CRAFT_PART_INSTALL/usr/share/applications/app.fluxer.FluxerDesktop.desktop"
       # The setuid helper cannot work in a snap; Electron runs with --no-sandbox
       rm -f "$CRAFT_PART_INSTALL/opt/Fluxer/chrome-sandbox"
-
-  # Turns the in-app "update" button (which opens fluxer.app/download) into a
-  # snap refresh, with an option to switch to the edge channel.
-  refresh-helper:
-    plugin: dump
-    source: snap/local
-    after: [fluxer]
-    stage-packages:
-      - curl
-      - xdg-utils
-      - zenity
-    override-build: |
-      craftctl default
-      mv "$CRAFT_PART_INSTALL/usr/bin/xdg-open" "$CRAFT_PART_INSTALL/usr/bin/xdg-open.real"
-      install -m 0755 xdg-open "$CRAFT_PART_INSTALL/usr/bin/xdg-open"
-      install -m 0755 -D fluxer-refresh "$CRAFT_PART_INSTALL/bin/fluxer-refresh"
-    prime:
-      - -xdg-open
-      - -fluxer-refresh
 
 lint:
   ignore:

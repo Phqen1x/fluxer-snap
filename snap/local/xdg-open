@@ -1,9 +1,0 @@
-#!/bin/sh
-# Fluxer's "update available" button opens its download page in the browser.
-# Inside the snap that makes no sense, so redirect it to a snap refresh.
-case "$1" in
-  https://fluxer.app/download*|https://canary.fluxer.app/download*)
-    exec "$SNAP/bin/fluxer-refresh"
-    ;;
-esac
-exec "$SNAP/usr/bin/xdg-open.real" "$@"
