@@ -72,7 +72,6 @@ apps:
       - network
       - network-bind
       - opengl
-      - password-manager-service
       - screen-inhibit-control
       - unity7
       - wayland

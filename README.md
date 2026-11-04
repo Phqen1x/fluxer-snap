@@ -18,7 +18,6 @@ permissions below.
 ```sh
 sudo snap connect fluxer:audio-record              # microphone
 sudo snap connect fluxer:camera                    # webcam
-sudo snap connect fluxer:password-manager-service  # saved logins / keyring
 ```
 
 ## Build
@@ -43,7 +42,6 @@ permissions, so connect them yourself:
 ```sh
 sudo snap connect fluxer:audio-record              # microphone
 sudo snap connect fluxer:camera                    # webcam
-sudo snap connect fluxer:password-manager-service  # saved logins / keyring
 ```
 
 Then run `fluxer`, or launch it from your app menu.
