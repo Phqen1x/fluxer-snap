@@ -1,6 +1,12 @@
 name: Update Fluxer snap
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - snap/**
+      - .github/workflows/update-fluxer.yml
+      - .github/scripts/**
   schedule:
     - cron: "17 */6 * * *"
   workflow_dispatch:
@@ -28,7 +34,7 @@ jobs:
       - name: Check for a new Fluxer release
         id: check
         env:
-          FORCE: ${{ inputs.force }}
+          FORCE: ${{ inputs.force || github.event_name == 'push' }}
         run: python3 .github/scripts/update_snapcraft.py
 
       - name: Share the updated snapcraft.yaml
