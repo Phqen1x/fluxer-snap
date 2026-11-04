@@ -44,6 +44,7 @@ permissions, so connect them yourself:
 sudo snap connect fluxer:audio-record              # microphone
 sudo snap connect fluxer:camera                    # webcam
 sudo snap connect fluxer:password-manager-service  # saved logins / keyring
+sudo snap connect fluxer:snapd-control             # in-app update button
 ```
 
 Then run `fluxer`, or launch it from your app menu.
@@ -62,7 +63,50 @@ Then run `fluxer`, or launch it from your app menu.
 - **Desktop entry:** the upstream `app.fluxer.FluxerDesktop.desktop` is used,
   with its icon path patched to resolve inside the snap.
 
-## Updating to a new Fluxer release
+## Updates
+
+### Automatic publishing
+
+`.github/workflows/update-fluxer.yml` checks the Fluxer apt repo every six
+hours. When a new `.deb` is out it updates `source` and `source-checksum` in
+`snap/snapcraft.yaml`, builds the snap, publishes it to the **edge** channel
+and commits the change. You can also run it by hand from the Actions tab
+(tick "force" to rebuild without a new release).
+
+It needs a repository secret named `SNAPCRAFT_STORE_CREDENTIALS`:
+
+```sh
+snapcraft export-login --snaps fluxer --channels edge \
+  --acls package_access,package_push,package_update,package_release -
+```
+
+Promote edge to `beta`/`candidate`/`stable` yourself once you've tested it.
+
+### The in-app update button
+
+Fluxer's "update available" button just opens `fluxer.app/download` in a
+browser, which is no use for a snap. The snap wraps `xdg-open`
+(`snap/local/xdg-open`) and, for that URL only, runs `snap/local/fluxer-refresh`
+instead. It asks whether to:
+
+- **Refresh**: update on the channel you're already tracking, or
+- **Refresh to edge**: switch to `latest/edge` and update.
+
+Switching to edge is sticky. To go back, run
+`sudo snap refresh fluxer --channel=latest/stable`.
+
+The refresh talks to snapd, so it needs the `snapd-control` interface:
+
+```sh
+sudo snap connect fluxer:snapd-control
+```
+
+Without it the button opens the app's page in the Snap Store instead.
+`snapd-control` is a privileged interface, so the Snap Store requires manual
+approval before it can be auto-connected. Request it on the
+[snapcraft forum](https://forum.snapcraft.io/c/store-requests/19).
+
+### Manual update
 
 Check the current version in the apt repo:
 
@@ -70,8 +114,8 @@ Check the current version in the apt repo:
 curl -fsSL https://pkgs.fluxer.com/deb/dists/stable/main/binary-amd64/Packages
 ```
 
-Then update `source` and `source-checksum` (use the `Filename` and `SHA256`
-fields) in `snap/snapcraft.yaml` and rebuild.
+Then set `source` and `source-checksum` (the `Filename` and `SHA256` fields)
+in `snap/snapcraft.yaml` and rebuild.
 
 ## Known limitations
 

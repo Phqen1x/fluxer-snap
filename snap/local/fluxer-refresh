@@ -1,0 +1,44 @@
+#!/bin/sh
+# Refresh the Fluxer snap via snapd, optionally switching to the edge channel.
+# Needs the snapd-control interface; falls back to the store page without it.
+SOCKET=/run/snapd.socket
+STORE_URL="snap://fluxer"
+open_store() { exec "$SNAP/usr/bin/xdg-open.real" "$STORE_URL"; }
+
+channel=""
+if command -v zenity >/dev/null 2>&1; then
+  picked=$(zenity --question --no-wrap --title "Fluxer update" \
+    --text "A new version of Fluxer is available.\n\nRefresh the snap now?" \
+    --ok-label "Refresh" --cancel-label "Cancel" \
+    --extra-button "Refresh to edge" 2>/dev/null)
+  rc=$?
+  if [ "$rc" -eq 0 ]; then
+    :
+  elif [ "$picked" = "Refresh to edge" ]; then
+    channel="latest/edge"
+  else
+    exit 0
+  fi
+fi
+
+if [ -n "$channel" ]; then
+  body="{\"action\":\"refresh\",\"channel\":\"$channel\"}"
+else
+  body='{"action":"refresh"}'
+fi
+
+response=$(curl -sS --unix-socket "$SOCKET" -X POST \
+  -H 'Content-Type: application/json' -d "$body" \
+  http://localhost/v2/snaps/fluxer 2>/dev/null) || open_store
+
+case "$response" in
+  *'"type":"async"'*)
+    msg="Fluxer is refreshing in the background. Restart it once the update finishes." ;;
+  *"no update available"*)
+    msg="Fluxer is already up to date on this channel." ;;
+  *)
+    open_store ;;
+esac
+
+command -v zenity >/dev/null 2>&1 && zenity --info --no-wrap --timeout 10 --title "Fluxer update" --text "$msg" 2>/dev/null
+exit 0

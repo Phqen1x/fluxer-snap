@@ -1,0 +1,53 @@
+name: Update Fluxer snap
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Rebuild and publish even if no new Fluxer version is out
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-fluxer-snap
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for a new Fluxer release
+        id: check
+        env:
+          FORCE: ${{ inputs.force }}
+        run: python3 .github/scripts/update_snapcraft.py
+
+      - name: Build snap
+        if: steps.check.outputs.changed == 'true'
+        id: build
+        uses: snapcore/action-build@v1
+
+      - name: Publish to edge
+        if: steps.check.outputs.changed == 'true'
+        uses: snapcore/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ steps.build.outputs.snap }}
+          release: edge
+
+      - name: Commit the updated snapcraft.yaml
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add snap/snapcraft.yaml
+          git diff --cached --quiet && exit 0
+          git commit -m "Update Fluxer to ${{ steps.check.outputs.version }}"
+          git push
