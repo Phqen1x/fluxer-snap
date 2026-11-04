@@ -1,0 +1,65 @@
+# Fluxer snap
+
+Unofficial snap package for [Fluxer](https://fluxer.app), an instant messaging
+and VoIP desktop app. It repackages the official `.deb` from
+`pkgs.fluxer.com` (an Electron app) as a `core24` snap.
+
+## Build
+
+```sh
+snapcraft pack
+```
+
+Needs [snapcraft](https://snapcraft.io/snapcraft) and LXD or Multipass. Run
+`snapcraft clean` first if a previous build failed, since stale part state can
+break the next one.
+
+## Install
+
+```sh
+sudo snap install --dangerous fluxer_*_amd64.snap
+```
+
+Snaps installed with `--dangerous` don't auto-connect these permissions, so
+connect them yourself:
+
+```sh
+sudo snap connect fluxer:audio-record              # microphone
+sudo snap connect fluxer:camera                    # webcam
+sudo snap connect fluxer:password-manager-service  # saved logins / keyring
+```
+
+Then run `fluxer`, or launch it from your app menu.
+
+## How it works
+
+- **Source:** the `.deb` is downloaded from the Fluxer apt repo at a pinned
+  URL and verified with a SHA256 checksum. The snap version is read from
+  `/opt/Fluxer/version` inside the deb.
+- **Libraries:** the deb's `Depends:` list is mirrored in `stage-packages`,
+  since apt dependencies don't carry over into a snap.
+- **Extension:** the `gnome` extension provides GTK and the GPU stack.
+- **Sandbox:** Fluxer is launched with `--no-sandbox` and the setuid
+  `chrome-sandbox` helper is removed, because it can't work inside a snap.
+  Confinement comes from snap's own sandbox instead.
+- **Desktop entry:** the upstream `app.fluxer.FluxerDesktop.desktop` is used,
+  with its icon path patched to resolve inside the snap.
+
+## Updating to a new Fluxer release
+
+Check the current version in the apt repo:
+
+```sh
+curl -fsSL https://pkgs.fluxer.com/deb/dists/stable/main/binary-amd64/Packages
+```
+
+Then update `source` and `source-checksum` (use the `Filename` and `SHA256`
+fields) in `snap/snapcraft.yaml` and rebuild.
+
+## Known limitations
+
+- amd64 only (upstream also ships arm64, which isn't wired up here).
+- `grade: devel`; switch to `stable` before publishing to the Snap Store.
+- The permissions requested are best guesses for a chat and voice app. If
+  something is blocked, `snappy-debug` shows which interface is missing.
+- Unofficial and not affiliated with Fluxer Platform AB.
