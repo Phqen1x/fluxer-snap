@@ -17,8 +17,11 @@ concurrency:
   group: update-fluxer-snap
 
 jobs:
-  update:
+  check:
     runs-on: ubuntu-24.04
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
+      version: ${{ steps.check.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -28,26 +31,72 @@ jobs:
           FORCE: ${{ inputs.force }}
         run: python3 .github/scripts/update_snapcraft.py
 
-      - name: Build snap
+      - name: Share the updated snapcraft.yaml
         if: steps.check.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapcraft-yaml
+          path: snap/snapcraft.yaml
+
+  build:
+    needs: check
+    if: needs.check.outputs.changed == 'true'
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: snapcraft-yaml
+          path: snap
+
+      - name: Build snap
         id: build
         uses: snapcore/action-build@v1
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snap-${{ matrix.arch }}
+          path: ${{ steps.build.outputs.snap }}
+
+  publish:
+    needs: [check, build]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: snap-*
+          path: snaps
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: snapcraft-yaml
+          path: snap
+
       - name: Publish to edge
-        if: steps.check.outputs.changed == 'true'
-        uses: snapcore/action-publish@v1
+        run: |
+          sudo snap install snapcraft --classic
+          for snap in snaps/*.snap; do
+            snapcraft upload --release=edge "$snap"
+          done
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-        with:
-          snap: ${{ steps.build.outputs.snap }}
-          release: edge
 
       - name: Commit the updated snapcraft.yaml
-        if: steps.check.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add snap/snapcraft.yaml
           git diff --cached --quiet && exit 0
-          git commit -m "Update Fluxer to ${{ steps.check.outputs.version }}"
+          git commit -m "Update Fluxer to ${{ needs.check.outputs.version }}"
           git push

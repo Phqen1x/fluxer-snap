@@ -2,7 +2,7 @@
 
 Unofficial snap package for [Fluxer](https://fluxer.app), an instant messaging
 and VoIP desktop app. It repackages the official `.deb` from
-`pkgs.fluxer.com` (an Electron app) as a `core24` snap.
+`pkgs.fluxer.com` (an Electron app) as a `core24` snap for amd64 and arm64.
 
 ## Install from the Snap Store
 
@@ -69,7 +69,7 @@ Then run `fluxer`, or launch it from your app menu.
 
 `.github/workflows/update-fluxer.yml` checks the Fluxer apt repo every six
 hours. When a new `.deb` is out it updates `source` and `source-checksum` in
-`snap/snapcraft.yaml`, builds the snap, publishes it to the **edge** channel
+`snap/snapcraft.yaml`, builds the snap for amd64 and arm64 (the latter on GitHub's arm64 runner), publishes both to the **edge** channel
 and commits the change. You can also run it by hand from the Actions tab
 (tick "force" to rebuild without a new release).
 
@@ -114,12 +114,13 @@ Check the current version in the apt repo:
 curl -fsSL https://pkgs.fluxer.com/deb/dists/stable/main/binary-amd64/Packages
 ```
 
-Then set `source` and `source-checksum` (the `Filename` and `SHA256` fields)
-in `snap/snapcraft.yaml` and rebuild.
+Then set the per-architecture `source` and `source-checksum` entries (the
+`Filename` and `SHA256` fields, from `binary-amd64` and `binary-arm64`) in
+`snap/snapcraft.yaml` and rebuild.
 
 ## Known limitations
 
-- amd64 only (upstream also ships arm64, which isn't wired up here).
+- The arm64 build is only built by the GitHub workflow (on an arm64 runner); I haven't run it on real arm64 hardware.
 - `grade: devel`; switch to `stable` before publishing to the Snap Store.
 - The permissions requested are best guesses for a chat and voice app. If
   something is blocked, `snappy-debug` shows which interface is missing.
