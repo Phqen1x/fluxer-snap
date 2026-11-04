@@ -4,6 +4,23 @@ Unofficial snap package for [Fluxer](https://fluxer.app), an instant messaging
 and VoIP desktop app. It repackages the official `.deb` from
 `pkgs.fluxer.com` (an Electron app) as a `core24` snap.
 
+## Install from the Snap Store
+
+```sh
+sudo snap install fluxer
+```
+
+Or find it in the Snap Store / App Center. Updates arrive automatically.
+
+If your microphone, camera or saved logins don't work, connect the
+permissions below.
+
+```sh
+sudo snap connect fluxer:audio-record              # microphone
+sudo snap connect fluxer:camera                    # webcam
+sudo snap connect fluxer:password-manager-service  # saved logins / keyring
+```
+
 ## Build
 
 ```sh
@@ -14,14 +31,14 @@ Needs [snapcraft](https://snapcraft.io/snapcraft) and LXD or Multipass. Run
 `snapcraft clean` first if a previous build failed, since stale part state can
 break the next one.
 
-## Install
+## Install a local build
 
 ```sh
 sudo snap install --dangerous fluxer_*_amd64.snap
 ```
 
-Snaps installed with `--dangerous` don't auto-connect these permissions, so
-connect them yourself:
+Snaps installed with `--dangerous` don't auto-connect any optional
+permissions, so connect them yourself:
 
 ```sh
 sudo snap connect fluxer:audio-record              # microphone
