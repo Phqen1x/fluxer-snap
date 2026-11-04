@@ -1,0 +1,72 @@
+name: fluxer
+title: Fluxer
+base: core24
+summary: Instant messaging and VoIP
+description: |
+  Fluxer is an instant messaging and VoIP desktop application.
+
+  This snap repackages the official Fluxer .deb from pkgs.fluxer.com.
+license: AGPL-3.0-or-later
+website: https://fluxer.app
+adopt-info: fluxer
+grade: devel
+confinement: strict
+
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+
+parts:
+  fluxer:
+    plugin: dump
+    source: https://pkgs.fluxer.com/deb/pool/main/f/fluxer/fluxer_2026.1101.102918_amd64.deb
+    source-type: deb
+    source-checksum: sha256/37fef0604c6af5cab0e9b951d031e84958f81adf508ec8abd5e116894ffecb40
+    stage-packages:
+      - libnotify4
+      - libnss3
+      - libxss1
+      - libxtst6
+      - xdg-utils
+      - libatspi2.0-0t64
+      - libsecret-1-0
+      - libpulse0
+      - libpipewire-0.3-0t64
+      - libappindicator3-1
+    override-build: |
+      craftctl default
+      craftctl set version="$(cat "$CRAFT_PART_INSTALL/opt/Fluxer/version")"
+      sed -i 's|^Icon=.*|Icon=${SNAP}/usr/share/icons/hicolor/1024x1024/apps/fluxer.png|' \
+        "$CRAFT_PART_INSTALL/usr/share/applications/app.fluxer.FluxerDesktop.desktop"
+      # The setuid helper cannot work in a snap; Electron runs with --no-sandbox
+      rm -f "$CRAFT_PART_INSTALL/opt/Fluxer/chrome-sandbox"
+
+lint:
+  ignore:
+    - library:
+      - opt/Fluxer/**
+
+apps:
+  fluxer:
+    command: opt/Fluxer/fluxer --no-sandbox
+    extensions: [gnome]
+    desktop: usr/share/applications/app.fluxer.FluxerDesktop.desktop
+    environment:
+      TMPDIR: $XDG_RUNTIME_DIR
+    plugs:
+      - audio-playback
+      - audio-record
+      - browser-support
+      - camera
+      - desktop
+      - desktop-legacy
+      - home
+      - network
+      - network-bind
+      - opengl
+      - password-manager-service
+      - screen-inhibit-control
+      - unity7
+      - wayland
+      - x11
