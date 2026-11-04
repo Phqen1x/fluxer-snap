@@ -44,7 +44,6 @@ permissions, so connect them yourself:
 sudo snap connect fluxer:audio-record              # microphone
 sudo snap connect fluxer:camera                    # webcam
 sudo snap connect fluxer:password-manager-service  # saved logins / keyring
-sudo snap connect fluxer:snapd-control             # in-app update button
 ```
 
 Then run `fluxer`, or launch it from your app menu.
@@ -95,16 +94,17 @@ instead. It asks whether to:
 Switching to edge is sticky. To go back, run
 `sudo snap refresh fluxer --channel=latest/stable`.
 
-The refresh talks to snapd, so it needs the `snapd-control` interface:
+The refresh talks to snapd, which needs the privileged `snapd-control`
+interface. The snap does **not** request it yet, because the Snap Store holds
+any upload that plugs it for manual review. Until that's approved, the button
+opens the app's page in the Snap Store (`snap://fluxer`) instead, and the
+dialog above is skipped.
 
-```sh
-sudo snap connect fluxer:snapd-control
-```
-
-Without it the button opens the app's page in the Snap Store instead.
-`snapd-control` is a privileged interface, so the Snap Store requires manual
-approval before it can be auto-connected. Request it on the
-[snapcraft forum](https://forum.snapcraft.io/c/store-requests/19).
+To enable the in-place refresh, add `- snapd-control` to the app's `plugs` in
+`snap/snapcraft.yaml` once the store approves it
+([request it on the snapcraft forum](https://forum.snapcraft.io/c/store-requests/19)),
+or for a local build run `sudo snap connect fluxer:snapd-control` after adding
+the plug.
 
 ### Manual update
 

@@ -92,7 +92,6 @@ apps:
       - opengl
       - password-manager-service
       - screen-inhibit-control
-      - snapd-control
       - unity7
       - wayland
       - x11

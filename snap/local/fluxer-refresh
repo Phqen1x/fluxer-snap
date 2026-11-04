@@ -5,6 +5,10 @@ SOCKET=/run/snapd.socket
 STORE_URL="snap://fluxer"
 open_store() { exec "$SNAP/usr/bin/xdg-open.real" "$STORE_URL"; }
 
+# Without the snapd-control interface the socket is off limits, so skip the
+# dialog and send the user to the store page instead.
+curl -sS --unix-socket "$SOCKET" -o /dev/null http://localhost/v2/system-info 2>/dev/null || open_store
+
 channel=""
 if command -v zenity >/dev/null 2>&1; then
   picked=$(zenity --question --no-wrap --title "Fluxer update" \
