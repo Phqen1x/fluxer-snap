@@ -24,12 +24,12 @@ parts:
   fluxer:
     plugin: dump
     source:
-      - on amd64: https://pkgs.fluxer.com/deb/pool/main/f/fluxer/fluxer_2026.1101.102918_amd64.deb
-      - on arm64: https://pkgs.fluxer.com/deb/pool/main/f/fluxer/fluxer_2026.1101.102918_arm64.deb
+      - on amd64: https://pkgs.fluxer.com/deb/pool/main/f/fluxer/fluxer_2026.1105.25408_amd64.deb
+      - on arm64: https://pkgs.fluxer.com/deb/pool/main/f/fluxer/fluxer_2026.1105.25408_arm64.deb
     source-type: deb
     source-checksum:
-      - on amd64: sha256/37fef0604c6af5cab0e9b951d031e84958f81adf508ec8abd5e116894ffecb40
-      - on arm64: sha256/1389d346cf1e0ae5a812cf6bb0033afc89aec9eccf44f3da6b4b069257c2155e
+      - on amd64: sha256/e97236a925c42325de646714b3fec5bee9a0ff112454e109c80a10c3c84b5931
+      - on arm64: sha256/246b61f10393b9d8ffa053ff8ce63f53750d23d27ea7f388e850dc6143b1bb90
     stage-packages:
       - libnotify4
       - libnss3
