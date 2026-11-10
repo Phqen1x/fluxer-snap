@@ -1,15 +1,25 @@
 name: fluxer
 title: Fluxer
 base: core24
-summary: Instant messaging and VoIP
+summary: Open source instant messaging and VoIP for communities and friends
 description: |
-  Fluxer is an instant messaging and VoIP desktop application.
+  Fluxer is a free and open source instant messaging and voice chat
+  platform. Use the desktop app to talk with friends and communities through
+  text channels, direct messages, and voice and video calls, with screen
+  sharing and desktop notifications.
 
-  This snap repackages the official Fluxer .deb from pkgs.fluxer.com.
+  This snap repackages the official Fluxer desktop .deb from pkgs.fluxer.com.
+  It is an unofficial community package and is not affiliated with or
+  endorsed by the Fluxer developers.
+
+  Packaging source and issue tracker: https://github.com/phqen1x/fluxer-snap
 license: AGPL-3.0-or-later
-website: https://fluxer.app
+website: https://fluxer.com/
+source-code: https://github.com/phqen1x/fluxer-snap
+issues: https://github.com/phqen1x/fluxer-snap/issues
+contact: https://github.com/phqen1x/fluxer-snap/issues
 adopt-info: fluxer
-grade: devel
+grade: stable
 confinement: strict
 
 platforms:
