@@ -57,6 +57,7 @@ lint:
 apps:
   fluxer:
     command: opt/Fluxer/fluxer --no-sandbox
+    autostart: app.fluxer.FluxerDesktop.desktop
     extensions: [gnome]
     desktop: usr/share/applications/app.fluxer.FluxerDesktop.desktop
     environment:
