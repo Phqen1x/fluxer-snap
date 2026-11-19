@@ -66,7 +66,10 @@ Then run `fluxer`, or launch it from your app menu.
   instead.
 - **Data directory:** offline builds keep their data in
   `~/snap/fluxer/current/.config/fluxer-distro`, separate from upstream's own
-  packages. Users upgrading from the old deb-based snap have to sign in again.
+  packages. For users upgrading from the old deb-based snap,
+  `snap/local/migrate-config` (an app `command-chain` entry) copies
+  `.config/fluxer` to `.config/fluxer-distro` once, at the first launch, so
+  they stay signed in. It leaves the old directory in place.
 - **Libraries:** runtime libraries the app and Electron need are listed in
   `stage-packages`; the `gnome` extension provides GTK and the GPU stack.
 - **Sandbox:** Fluxer is launched with `--no-sandbox` and the setuid

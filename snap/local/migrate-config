@@ -1,0 +1,24 @@
+#!/bin/sh
+# One-time copy of the data from the deb-based snap (~/.config/fluxer) to
+# the directory used by offline builds (~/.config/fluxer-distro). Both live
+# in $SNAP_USER_DATA, and the old directory is left in place.
+
+config_home="${XDG_CONFIG_HOME:-$SNAP_USER_DATA/.config}"
+old="$config_home/fluxer"
+new="$config_home/fluxer-distro"
+
+if [ -d "$old" ] && [ ! -e "$new" ]; then
+  tmp="$new.migrating"
+  rm -rf "$tmp"
+  if cp -a "$old" "$tmp"; then
+    # Stale singleton locks would make the app think it is already running;
+    # the caches are rebuilt on demand.
+    rm -rf "$tmp"/Singleton* "$tmp/Cache" "$tmp/Code Cache" "$tmp/GPUCache"
+    mv "$tmp" "$new"
+  else
+    rm -rf "$tmp"
+    echo "fluxer: could not migrate $old to $new" >&2
+  fi
+fi
+
+exec "$@"

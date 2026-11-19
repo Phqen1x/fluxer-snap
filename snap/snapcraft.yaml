@@ -121,6 +121,7 @@ parts:
       done
       install -Dm644 "$CRAFT_PROJECT_DIR/snap/local/app.fluxer.FluxerDesktop.desktop" \
         "$CRAFT_PART_INSTALL/usr/share/applications/app.fluxer.FluxerDesktop.desktop"
+      install -Dm755 "$CRAFT_PROJECT_DIR/snap/local/migrate-config" "$CRAFT_PART_INSTALL/bin/migrate-config"
 
       craftctl set version="$FLUXER_VERSION"
 
@@ -132,6 +133,7 @@ lint:
 apps:
   fluxer:
     command: opt/Fluxer/fluxer --no-sandbox
+    command-chain: [bin/migrate-config]
     autostart: app.fluxer.FluxerDesktop.desktop
     extensions: [gnome]
     desktop: usr/share/applications/app.fluxer.FluxerDesktop.desktop
