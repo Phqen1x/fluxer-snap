@@ -139,6 +139,10 @@ apps:
     desktop: usr/share/applications/app.fluxer.FluxerDesktop.desktop
     environment:
       TMPDIR: $XDG_RUNTIME_DIR
+      # FLUXER_OFFLINE leaves "Check for updates" in the tray and app menus,
+      # where it compares against upstream's feed and links to their
+      # downloads. This launch flag removes those items.
+      FLUXER_DISABLE_MODULE_UPDATES: "1"
     plugs:
       - audio-playback
       - audio-record

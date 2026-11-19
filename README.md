@@ -64,6 +64,9 @@ Then run `fluxer`, or launch it from your app menu.
   the desktop updater, the web app update check and module downloads, and stops
   the app writing its own `.desktop` file. Updates come from the Snap Store
   instead.
+- **Update menu items:** `FLUXER_OFFLINE` does not remove "Check for updates"
+  from the tray and app menus, so the app environment also sets
+  `FLUXER_DISABLE_MODULE_UPDATES=1`, which hides them.
 - **Data directory:** offline builds keep their data in
   `~/snap/fluxer/current/.config/fluxer-distro`, separate from upstream's own
   packages. For users upgrading from the old deb-based snap,
