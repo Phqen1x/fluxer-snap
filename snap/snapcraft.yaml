@@ -36,6 +36,21 @@ parts:
     source: https://github.com/fluxerapp/fluxer.git
     source-tag: fluxer-desktop-stable@2026.1118.233113
     source-depth: 1
+    override-pull: |
+      craftctl default
+      # Local fixes, also submitted upstream. A patch that upstream has
+      # already merged is skipped; one that no longer applies fails the build.
+      for patch in "$CRAFT_PROJECT_DIR"/snap/local/patches/*.patch; do
+        [ -e "$patch" ] || continue
+        if git apply --check "$patch" 2>/dev/null; then
+          git apply "$patch"
+        elif git apply --reverse --check "$patch" 2>/dev/null; then
+          echo "Skipping $(basename "$patch"): already applied upstream"
+        else
+          echo "$(basename "$patch") does not apply" >&2
+          exit 1
+        fi
+      done
     build-environment:
       - FLUXER_VERSION: "2026.1118.233113"
       - BUILD_CHANNEL: stable
@@ -139,10 +154,6 @@ apps:
     desktop: usr/share/applications/app.fluxer.FluxerDesktop.desktop
     environment:
       TMPDIR: $XDG_RUNTIME_DIR
-      # FLUXER_OFFLINE leaves "Check for updates" in the tray and app menus,
-      # where it compares against upstream's feed and links to their
-      # downloads. This launch flag removes those items.
-      FLUXER_DISABLE_MODULE_UPDATES: "1"
     plugs:
       - audio-playback
       - audio-record
