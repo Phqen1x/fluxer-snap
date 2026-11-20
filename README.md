@@ -1,8 +1,9 @@
 # Fluxer snap
 
 Unofficial snap package for [Fluxer](https://fluxer.app), an instant messaging
-and VoIP desktop app. It repackages the official `.deb` from
-`pkgs.fluxer.com` (an Electron app) as a `core24` snap for amd64 and arm64.
+and VoIP desktop app. It builds the Electron app from the
+[upstream source](https://github.com/fluxerapp/fluxer) at each stable release
+tag, as a `core26` snap for amd64 and arm64.
 
 ## Install from the Snap Store
 
@@ -26,7 +27,9 @@ sudo snap connect fluxer:camera                    # webcam
 snapcraft pack
 ```
 
-Needs [snapcraft](https://snapcraft.io/snapcraft) and LXD or Multipass. Run
+Needs [snapcraft](https://snapcraft.io/snapcraft) 9 or newer and LXD or
+Multipass. The build compiles Rust native modules and the web app, so expect
+it to take a while and to need several GB of disk and memory. Run
 `snapcraft clean` first if a previous build failed, since stale part state can
 break the next one.
 
@@ -48,26 +51,49 @@ Then run `fluxer`, or launch it from your app menu.
 
 ## How it works
 
-- **Source:** the `.deb` is downloaded from the Fluxer apt repo at a pinned
-  URL and verified with a SHA256 checksum. The snap version is read from
-  `/opt/Fluxer/version` inside the deb.
-- **Libraries:** the deb's `Depends:` list is mirrored in `stage-packages`,
-  since apt dependencies don't carry over into a snap.
-- **Extension:** the `gnome` extension provides GTK and the GPU stack.
+- **Source:** the `fluxer-desktop-stable@<version>` tag of
+  `fluxerapp/fluxer` is built following upstream's
+  [`fluxer_desktop/PACKAGING.md`](https://github.com/fluxerapp/fluxer/blob/main/fluxer_desktop/PACKAGING.md).
+  The Rust toolchain, pnpm and wasm-bindgen versions are read from the tagged
+  source tree; Node.js 26 comes from the `node` snap.
+- **Electron:** upstream's Electron build with its VA-API patch is downloaded
+  from their GitHub release, and the build verifies it against the checksums
+  pinned in the tagged `electron/runtime.json`.
+- **No in-app updates:** the app is built with `FLUXER_OFFLINE=1`, upstream's
+  switch for distribution builds. It is compiled into the bundle and turns off
+  the desktop updater, the web app update check and module downloads, and stops
+  the app writing its own `.desktop` file. Updates come from the Snap Store
+  instead.
+- **Patches:** `snap/local/patches/*.patch` are applied to the upstream
+  source after it is pulled. Each has been submitted upstream; once upstream
+  merges one it is skipped, and it can then be deleted. A patch that no
+  longer applies fails the build. The current patch removes "Check for
+  updates" from the tray and app menus in offline builds.
+- **Data directory:** offline builds keep their data in
+  `~/snap/fluxer/current/.config/fluxer-distro`, separate from upstream's own
+  packages. For users upgrading from the old deb-based snap,
+  `snap/local/migrate-config` (an app `command-chain` entry) copies
+  `.config/fluxer` to `.config/fluxer-distro` once, at the first launch, so
+  they stay signed in. It leaves the old directory in place.
+- **Libraries:** runtime libraries the app and Electron need are listed in
+  `stage-packages`; the `gnome` extension provides GTK and the GPU stack.
 - **Sandbox:** Fluxer is launched with `--no-sandbox` and the setuid
   `chrome-sandbox` helper is removed, because it can't work inside a snap.
   Confinement comes from snap's own sandbox instead.
-- **Desktop entry:** the upstream `app.fluxer.FluxerDesktop.desktop` is used,
-  with its icon path patched to resolve inside the snap.
+- **Desktop entry:** `snap/local/app.fluxer.FluxerDesktop.desktop` is
+  installed under the desktop ID the app looks for, so `fluxer://` links work.
 
 ## Updates
 
 ### Automatic publishing
 
-`.github/workflows/update-fluxer.yml` checks the Fluxer apt repo every six
-hours. When a new `.deb` is out it updates `source` and `source-checksum` in
-`snap/snapcraft.yaml`, builds the snap for amd64 and arm64 (the latter on GitHub's arm64 runner), publishes both to the **edge** channel
-and commits the change. You can also run it by hand from the Actions tab
+`.github/workflows/update-fluxer.yml` checks upstream's stable feed every six
+hours. When `shell.latest_version` changes (and its
+`fluxer-desktop-stable@<version>` tag exists) it updates `source-tag` and
+`FLUXER_VERSION` in `snap/snapcraft.yaml`, builds the snap from source for
+amd64 and arm64 (the latter on GitHub's arm64 runner), publishes both to the
+**edge** channel and commits the change. Pull requests touching the packaging
+build both architectures without publishing. You can also run it by hand from the Actions tab
 (tick "force" to rebuild without a new release).
 
 It needs a repository secret named `SNAPCRAFT_STORE_CREDENTIALS`:
@@ -81,15 +107,15 @@ Promote edge to `beta`/`candidate`/`stable` yourself once you've tested it.
 
 ### Manual update
 
-Check the current version in the apt repo:
+Check the current stable version:
 
 ```sh
-curl -fsSL https://pkgs.fluxer.com/deb/dists/stable/main/binary-amd64/Packages
+curl -fsS https://pkgs.fluxer.com/desktop/stable/linux/x64/modules.json | jq -r .shell.latest_version
 ```
 
-Then set the per-architecture `source` and `source-checksum` entries (the
-`Filename` and `SHA256` fields, from `binary-amd64` and `binary-arm64`) in
-`snap/snapcraft.yaml` and rebuild.
+Then set `source-tag` (`fluxer-desktop-stable@<version>`) and
+`FLUXER_VERSION` in `snap/snapcraft.yaml` and rebuild, or just run
+`python3 .github/scripts/update_snapcraft.py`.
 
 ## Known limitations
 

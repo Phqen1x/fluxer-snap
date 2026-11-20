@@ -1,6 +1,6 @@
 name: fluxer
 title: Fluxer
-base: core24
+base: core26
 summary: Open source instant messaging and VoIP for communities and friends
 description: |
   Fluxer is a free and open source instant messaging and voice chat
@@ -8,9 +8,9 @@ description: |
   text channels, direct messages, and voice and video calls, with screen
   sharing and desktop notifications.
 
-  This snap repackages the official Fluxer desktop .deb from pkgs.fluxer.com.
-  It is an unofficial community package and is not affiliated with or
-  endorsed by the Fluxer developers.
+  This snap builds the Fluxer desktop app from the upstream source at each
+  stable release tag. It is an unofficial community package and is not
+  affiliated with or endorsed by the Fluxer developers.
 
   Packaging source and issue tracker: https://github.com/phqen1x/fluxer-snap
 license: AGPL-3.0-or-later
@@ -32,32 +32,113 @@ platforms:
 
 parts:
   fluxer:
-    plugin: dump
-    source:
-      - on amd64: https://pkgs.fluxer.com/deb/pool/main/f/fluxer/fluxer_2026.1120.30521_amd64.deb
-      - on arm64: https://pkgs.fluxer.com/deb/pool/main/f/fluxer/fluxer_2026.1120.30521_arm64.deb
-    source-type: deb
-    source-checksum:
-      - on amd64: sha256/8a23e13d6946fb368a678975b1f4ec00f87db3eeb9e238430b687dbec3361b6c
-      - on arm64: sha256/be946f981ff0dda3e4b6e4368d25c1a1d329cccdc9e7a8ba0e3073b6d989329e
+    plugin: nil
+    source: https://github.com/fluxerapp/fluxer.git
+    source-tag: fluxer-desktop-stable@2026.1120.163638
+    source-depth: 1
+    override-pull: |
+      craftctl default
+      # Local fixes, also submitted upstream. A patch that upstream has
+      # already merged is skipped; one that no longer applies fails the build.
+      for patch in "$CRAFT_PROJECT_DIR"/snap/local/patches/*.patch; do
+        [ -e "$patch" ] || continue
+        if git apply --check "$patch" 2>/dev/null; then
+          git apply "$patch"
+        elif git apply --reverse --check "$patch" 2>/dev/null; then
+          echo "Skipping $(basename "$patch"): already applied upstream"
+        else
+          echo "$(basename "$patch") does not apply" >&2
+          exit 1
+        fi
+      done
+    build-environment:
+      - FLUXER_VERSION: "2026.1120.163638"
+      - BUILD_CHANNEL: stable
+      # Bakes in the distro-build behaviour: no updater (shell or web app),
+      # no self-written .desktop file, and a separate data directory.
+      - FLUXER_OFFLINE: "1"
+      - FLUXER_LAUNCH_COMMAND: fluxer
+      - FLUXER_SYSTEM_LIBS: "1"
+      - ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+      - PATH: "${HOME}/.cargo/bin:${CRAFT_PART_BUILD}/.pnpm/node_modules/.bin:${PATH}"
+    build-snaps:
+      - node/26/stable
+      - rustup
+    build-packages:
+      - build-essential
+      - clang
+      - curl
+      - libclang-dev
+      - libfido2-dev
+      - libpipewire-0.3-dev
+      - libudev-dev
+      - llvm
+      - pkg-config
+      - python3
     stage-packages:
+      - libappindicator3-1
+      - libatspi2.0-0t64
+      - libfido2-1
       - libnotify4
       - libnss3
+      - libpipewire-0.3-0t64
+      - libpulse0
+      - libsecret-1-0
       - libxss1
       - libxtst6
       - xdg-utils
-      - libatspi2.0-0t64
-      - libsecret-1-0
-      - libpulse0
-      - libpipewire-0.3-0t64
-      - libappindicator3-1
     override-build: |
-      craftctl default
-      craftctl set version="$(cat "$CRAFT_PART_INSTALL/opt/Fluxer/version")"
-      sed -i 's|^Icon=.*|Icon=${SNAP}/usr/share/icons/hicolor/1024x1024/apps/fluxer.png|' \
-        "$CRAFT_PART_INSTALL/usr/share/applications/app.fluxer.FluxerDesktop.desktop"
+      set -euo pipefail
+
+      case "$CRAFT_ARCH_BUILD_FOR" in
+        amd64) electron_arch=x64 ;;
+        arm64) electron_arch=arm64 ;;
+        *) echo "unsupported architecture: $CRAFT_ARCH_BUILD_FOR" >&2; exit 1 ;;
+      esac
+
+      # Toolchain versions are taken from the tagged source tree.
+      rust_channel="$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)"
+      rustup toolchain install "$rust_channel" --profile minimal --target wasm32-unknown-unknown
+      rustup default "$rust_channel"
+      wasm_bindgen_version="$(awk '/^name = "wasm-bindgen"$/ {getline; gsub(/[^0-9.]/, ""); print; exit}' Cargo.lock)"
+      cargo install --locked wasm-bindgen-cli --version "$wasm_bindgen_version"
+
+      pnpm_version="$(node -p 'require("./package.json").packageManager.split("@")[1]')"
+      npm install --no-save --prefix "$CRAFT_PART_BUILD/.pnpm" "pnpm@$pnpm_version"
+
+      # Upstream's Electron with its VA-API patch. The build verifies the
+      # archive against the checksums pinned in electron/runtime.json.
+      electron_tag="$(node -p 'require("./fluxer_desktop/electron/runtime.json").releaseTag')"
+      electron_version="$(node -p 'require("./fluxer_desktop/electron/runtime.json").electronVersion')"
+      export FLUXER_ELECTRON_DIST="$CRAFT_PART_BUILD/electron-dist"
+      mkdir -p "$FLUXER_ELECTRON_DIST"
+      for ext in zip fluxer.json; do
+        curl -fsSL --retry 3 -o "$FLUXER_ELECTRON_DIST/electron-v$electron_version-linux-$electron_arch.$ext" \
+          "https://github.com/fluxerapp/fluxer/releases/download/$electron_tag/electron-v$electron_version-linux-$electron_arch.$ext"
+      done
+
+      pnpm install --frozen-lockfile --filter 'fluxer_desktop...' --filter 'fluxer_app...'
+      BUILD_VERSION="$FLUXER_VERSION" NODE_ENV=production pnpm --filter fluxer_desktop package:dir
+
+      mkdir -p "$CRAFT_PART_INSTALL/opt"
+      rm -rf "$CRAFT_PART_INSTALL/opt/Fluxer"
+      cp -a fluxer_desktop/dist-electron/linux*-unpacked "$CRAFT_PART_INSTALL/opt/Fluxer"
       # The setuid helper cannot work in a snap; Electron runs with --no-sandbox
       rm -f "$CRAFT_PART_INSTALL/opt/Fluxer/chrome-sandbox"
+
+      # Lets the app's autostart check find FLUXER_LAUNCH_COMMAND on PATH
+      mkdir -p "$CRAFT_PART_INSTALL/usr/bin"
+      ln -sf ../../opt/Fluxer/fluxer "$CRAFT_PART_INSTALL/usr/bin/fluxer"
+
+      for icon in fluxer_desktop/build_resources/icons-stable/[0-9]*x[0-9]*.png; do
+        size="$(basename "$icon" .png)"
+        install -Dm644 "$icon" "$CRAFT_PART_INSTALL/usr/share/icons/hicolor/$size/apps/fluxer.png"
+      done
+      install -Dm644 "$CRAFT_PROJECT_DIR/snap/local/app.fluxer.FluxerDesktop.desktop" \
+        "$CRAFT_PART_INSTALL/usr/share/applications/app.fluxer.FluxerDesktop.desktop"
+      install -Dm755 "$CRAFT_PROJECT_DIR/snap/local/migrate-config" "$CRAFT_PART_INSTALL/bin/migrate-config"
+
+      craftctl set version="$FLUXER_VERSION"
 
 lint:
   ignore:
@@ -67,6 +148,7 @@ lint:
 apps:
   fluxer:
     command: opt/Fluxer/fluxer --no-sandbox
+    command-chain: [bin/migrate-config]
     autostart: app.fluxer.FluxerDesktop.desktop
     extensions: [gnome]
     desktop: usr/share/applications/app.fluxer.FluxerDesktop.desktop
@@ -79,6 +161,7 @@ apps:
       - camera
       - desktop
       - desktop-legacy
+      - gsettings
       - home
       - network
       - network-bind
