@@ -34,7 +34,7 @@ parts:
   fluxer:
     plugin: nil
     source: https://github.com/fluxerapp/fluxer.git
-    source-tag: fluxer-desktop-stable@2026.1120.163638
+    source-tag: fluxer-desktop-stable@2026.1124.64728
     source-depth: 1
     override-pull: |
       craftctl default
@@ -52,7 +52,7 @@ parts:
         fi
       done
     build-environment:
-      - FLUXER_VERSION: "2026.1120.163638"
+      - FLUXER_VERSION: "2026.1124.64728"
       - BUILD_CHANNEL: stable
       # Bakes in the distro-build behaviour: no updater (shell or web app),
       # no self-written .desktop file, and a separate data directory.
